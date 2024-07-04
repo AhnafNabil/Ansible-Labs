@@ -4,7 +4,7 @@
 
 This documentation provides a comprehensive guide to installing and configuring MySQL on an Amazon EC2 instance using Ansible. The process involves setting up an EC2 instance, installing Ansible on your local machine, writing an Ansible playbook, executing it to ensure MySQL is installed and secured, and verifying the installation.
 
-![alt text](./images/diagram-mysql-ansible.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/Ansible-Labs/main/Ansible-Mysql/images/diagram-mysql-ansible.png)
 
 ## Prerequisites
 
@@ -138,7 +138,7 @@ ansible-playbook -i hosts.ini install_mysql.yml
 
 This command will connect to your EC2 instance and perform the steps defined in the playbook to install and configure MySQL.
 
-![alt text](./images/ansible-mysql-01.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/Ansible-Labs/main/Ansible-Mysql/images/ansible-mysql-01.png)
 
 ### Step 5: Verify the Installation
 
@@ -158,7 +158,7 @@ This command will connect to your EC2 instance and perform the steps defined in 
 
    The output should indicate that MySQL is active and running.
 
-   ![alt text](./images/ansible-mysql-02.png)
+   ![alt text](https://raw.githubusercontent.com/AhnafNabil/Ansible-Labs/main/Ansible-Mysql/images/ansible-mysql-02.png)
 
 3. **Log in to the MySQL shell:**
 
@@ -184,7 +184,7 @@ This command will connect to your EC2 instance and perform the steps defined in 
 
    This will display the version of MySQL that is installed.
 
-   ![alt text](./images/ansible-mysql-03.png)
+   ![alt text](https://raw.githubusercontent.com/AhnafNabil/Ansible-Labs/main/Ansible-Mysql/images/ansible-mysql-03.png)
 
 
 ## Explanation of Playbook
