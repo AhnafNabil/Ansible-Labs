@@ -4,6 +4,8 @@
 
 This documentation provides a comprehensive guide to installing and configuring MySQL on an Amazon EC2 instance using Ansible. The process involves setting up an EC2 instance, installing Ansible on your local machine, writing an Ansible playbook, executing it to ensure MySQL is installed and secured, and verifying the installation.
 
+![alt text](./images/diagram-mysql-ansible.png)
+
 ## Prerequisites
 
 1. **EC2 Instance:**
