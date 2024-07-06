@@ -8,7 +8,7 @@
     - name: Install MySQL server and Python MySQL libraries
       apt:
         name:
-          - MySQL-python
+          - python3-PyMySQL
           - mysql
           - mysql-server
         state: present
