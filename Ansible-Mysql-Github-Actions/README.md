@@ -221,4 +221,4 @@ jobs:
 
     This will display the version of MySQL that is installed.
 
-By following these steps, you will automate the process of installing and configuring MySQL on your EC2 instance using Ansible and GitHub Actions. Adjust the playbook and workflow file as needed based on your specific requirements and environment.
+By following these steps, you will automate the process of installing and configuring MySQL on your EC2 instance using Ansible and GitHub Actions. Adjust the playbook and workflow file as needed based on your specific requirements and environment. This is new
