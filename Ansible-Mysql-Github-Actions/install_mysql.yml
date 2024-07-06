@@ -2,6 +2,8 @@
 - name: MySQL Installation on EC2 instance
   hosts: mysql_servers
   become: yes
+  vars:
+    mysql_root_password: "your_root_password"
   tasks:
     - name: Update apt-get
       apt:
@@ -23,30 +25,29 @@
         state: started
         enabled: yes
 
-    - name: Check if MySQL root password is already set
+    - name: Check if MySQL root password is set
       shell: |
-        mysql -u root -e "SELECT 1;"
-      register: mysql_root_check
-      ignore_errors: true
+        mysql -uroot -e "SELECT 1;"
+      register: mysql_root_password_check
+      ignore_errors: yes
 
     - name: Set MySQL root password
       mysql_user:
         name: root
-        password: "your_root_password"
+        password: "{{ mysql_root_password }}"
         host: "localhost"
         priv: "*.*:ALL,GRANT"
         state: present
         login_unix_socket: /var/run/mysqld/mysqld.sock
-      when: mysql_root_check.rc != 0
+      when: mysql_root_password_check.failed
 
-    - name: Ensure root password is set
+    - name: Update MySQL root password
       mysql_user:
         name: root
-        password: "your_root_password"
+        password: "{{ mysql_root_password }}"
         host: "localhost"
         priv: "*.*:ALL,GRANT"
         state: present
         login_user: root
-        login_password: "your_root_password"
-        login_unix_socket: /var/run/mysqld/mysqld.sock
-      when: mysql_root_check.rc == 0
+        login_password: "{{ mysql_root_password }}"
+      when: not mysql_root_password_check.failed
