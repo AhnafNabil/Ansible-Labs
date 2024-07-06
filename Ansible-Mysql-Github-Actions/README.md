@@ -123,51 +123,52 @@ Ensure you have an EC2 instance running and accessible via SSH. Make sure the se
 
 2. **Inside this directory, create a file named `ansible-mysql.yml`:**
 
-    ```yaml
-    name: Deploy MySQL using Ansible
+```yaml
+name: Deploy MySQL using Ansible
 
-    on:
-    push:
-        branches:
-        - main
-    workflow_dispatch:
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
-    jobs:
-    deploy:
-        runs-on: ubuntu-latest
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-        steps:
-        - name: Checkout repository
-        uses: actions/checkout@v2
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-        - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-            python-version: '3.x'
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
 
-        - name: Install Ansible
-        run: |
-            sudo apt update
-            sudo apt install ansible -y
+    - name: Install Ansible
+      run: |
+        sudo apt update
+        sudo apt install ansible -y
 
-        - name: Set up SSH Key and known_hosts
-        env:
-            SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-            EC2_PUBLIC_IP: ${{ secrets.EC2_PUBLIC_IP }}
-        run: |
-            echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-            chmod 600 ~/.ssh/id_rsa
-            ssh-keyscan -H $EC2_PUBLIC_IP >> ~/.ssh/known_hosts
+    - name: Set up SSH Key and known_hosts
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        EC2_PUBLIC_IP: ${{ secrets.EC2_PUBLIC_IP }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H $EC2_PUBLIC_IP >> ~/.ssh/known_hosts
 
-        - name: Replace placeholders in inventory file
-        run: |
-            sed -i "s/{{ EC2_PUBLIC_IP }}/${{ secrets.EC2_PUBLIC_IP }}/g" Ansible-Mysql-Github-Actions/hosts.ini
-            sed -i "s|{{ SSH_PRIVATE_KEY_PATH }}|~/.ssh/id_rsa|g" Ansible-Mysql-Github-Actions/hosts.ini
+    - name: Replace placeholders in inventory file
+      run: |
+        sed -i "s/{{ EC2_PUBLIC_IP }}/${{ secrets.EC2_PUBLIC_IP }}/g" Ansible-Mysql-Github-Actions/hosts.ini
+        sed -i "s|{{ SSH_PRIVATE_KEY_PATH }}|~/.ssh/id_rsa|g" Ansible-Mysql-Github-Actions/hosts.ini
 
-        - name: Run Ansible Playbook
-        run: |
-            ansible-playbook -i Ansible-Mysql-Github-Actions/hosts.ini Ansible-Mysql-Github-Actions/install_mysql.yml
-    ```
+    - name: Run Ansible Playbook
+      run: |
+        ansible-playbook -i Ansible-Mysql-Github-Actions/hosts.ini Ansible-Mysql-Github-Actions/install_mysql.yml
+```
 
 ### Step 4: Store the SSH Key as a GitHub Secret
 
