@@ -3,6 +3,20 @@
   hosts: mysql_servers
   become: yes
   tasks:
+    - name: Preconfigure MySQL root password
+      debconf:
+        name: "mysql-server"
+        question: "mysql-server/root_password"
+        value: "your_root_password"
+        vtype: "password"
+
+    - name: Preconfigure MySQL root password again (for confirmation)
+      debconf:
+        name: "mysql-server"
+        question: "mysql-server/root_password_again"
+        value: "your_root_password"
+        vtype: "password"
+
     - name: Update apt-get and install necessary packages
       apt:
         name: "{{ item }}"
@@ -18,7 +32,7 @@
         state: started
         enabled: yes
 
-    - name: Set MySQL root password
+    - name: Set MySQL root password and ensure it is secure
       mysql_user:
         name: root
         password: "your_root_password"
