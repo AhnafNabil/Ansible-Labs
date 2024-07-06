@@ -1,19 +1,20 @@
 ---
-- name: MySQL Installation and Password Management
+- name: Simple MySQL Installation
   hosts: mysql_servers
   become: yes
-  vars:
-    mysql_root_password: "your_actual_root_password_here"
   tasks:
     - name: Update apt-get
       apt:
         update_cache: yes
 
-    - name: Install MySQL server and Python MySQL libraries
+    - name: Install MySQL server
       apt:
-        name:
-          - mysql-server
-          - python3-pymysql
+        name: mysql-server
+        state: present
+
+    - name: Install Python MySQL libraries
+      apt:
+        name: python3-pymysql
         state: present
 
     - name: Start MySQL service
@@ -22,45 +23,23 @@
         state: started
         enabled: yes
 
-    - name: Check if MySQL root password is set
+    - name: Check if MySQL root password is already set
       shell: |
-        mysql -uroot -e "SELECT 1;"
-      register: mysql_root_password_check
+        if mysql -u root -e 'SELECT 1' >/dev/null 2>&1; then
+          echo "Password is set"
+        else
+          echo "Password is not set"
+        fi
+      register: root_password_check
       ignore_errors: yes
+      changed_when: false
 
     - name: Set MySQL root password
       mysql_user:
         name: root
-        password: "{{ mysql_root_password }}"
-        host: localhost
+        password: "your_root_password"
+        host: "localhost"
         priv: "*.*:ALL,GRANT"
         state: present
         login_unix_socket: /var/run/mysqld/mysqld.sock
-      when: mysql_root_password_check.rc != 0
-      ignore_errors: yes
-      register: set_mysql_root_password
-
-    - name: Update MySQL root password if already set
-      mysql_user:
-        name: root
-        password: "{{ mysql_root_password }}"
-        host: localhost
-        priv: "*.*:ALL,GRANT"
-        state: present
-        login_user: root
-        login_password: "{{ mysql_root_password }}"
-      when: set_mysql_root_password is failed or set_mysql_root_password is skipped
-
-    - name: Check MySQL root password
-      shell: mysql --user=root --password="{{ mysql_root_password }}" --execute="SELECT 1;"
-      register: mysql_root_password_check_final
-      ignore_errors: yes
-
-    - name: Debug output
-      debug:
-        var: mysql_root_password_check_final
-
-    - name: Fail if MySQL root password is incorrect
-      fail:
-        msg: "MySQL root password is incorrect or could not be set."
-      when: mysql_root_password_check_final.rc != 0 and set_mysql_root_password.changed is not defined
+      when: root_password_check.stdout == "Password is not set"
