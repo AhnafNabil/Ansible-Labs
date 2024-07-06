@@ -5,13 +5,14 @@
   vars:
     mysql_root_password: "your_actual_root_password_here"
   tasks:
-    - name: Install MySQL server and Python MySQL libraries
+    - name: Update and install MySQL server and Python MySQL libraries
       apt:
         name:
-          - python3-PyMySQL
-          - mysql
+          - python3-pymysql
           - mysql-server
         state: present
+        update_cache: yes
+
 
     - name: Start the MySQL service
       service:
