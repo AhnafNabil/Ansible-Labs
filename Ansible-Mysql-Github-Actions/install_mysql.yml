@@ -22,6 +22,12 @@
         state: started
         enabled: yes
 
+    - name: Check if MySQL root password is set
+      shell: |
+        mysql -uroot -e "SELECT 1;"
+      register: mysql_root_password_check
+      ignore_errors: yes
+
     - name: Set MySQL root password
       mysql_user:
         name: root
@@ -30,8 +36,9 @@
         priv: "*.*:ALL,GRANT"
         state: present
         login_unix_socket: /var/run/mysqld/mysqld.sock
+      when: mysql_root_password_check.rc != 0
       ignore_errors: yes
-      register: mysql_root_password_set
+      register: set_mysql_root_password
 
     - name: Update MySQL root password if already set
       mysql_user:
@@ -42,18 +49,18 @@
         state: present
         login_user: root
         login_password: "{{ mysql_root_password }}"
-      when: mysql_root_password_set|failed
+      when: set_mysql_root_password is failed or set_mysql_root_password is skipped
 
     - name: Check MySQL root password
       shell: mysql --user=root --password="{{ mysql_root_password }}" --execute="SELECT 1;"
-      register: mysql_root_password_check
+      register: mysql_root_password_check_final
       ignore_errors: yes
 
     - name: Debug output
       debug:
-        var: mysql_root_password_check
+        var: mysql_root_password_check_final
 
     - name: Fail if MySQL root password is incorrect
       fail:
         msg: "MySQL root password is incorrect or could not be set."
-      when: mysql_root_password_check.rc != 0 and not mysql_root_password_set.changed
+      when: mysql_root_password_check_final.rc != 0 and set_mysql_root_password.changed is not defined
