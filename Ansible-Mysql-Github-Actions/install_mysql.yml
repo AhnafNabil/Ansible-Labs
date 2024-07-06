@@ -3,6 +3,12 @@
   hosts: mysql_servers
   become: yes
   tasks:
+    - name: Install debconf-utils
+      apt:
+        name: debconf-utils
+        state: present
+        update_cache: yes
+
     - name: Preconfigure MySQL root password
       debconf:
         name: "mysql-server"
@@ -21,7 +27,6 @@
       apt:
         name: "{{ item }}"
         state: present
-        update_cache: yes
       loop:
         - mysql-server  # MySQL Server
         - python3-mysqldb  # MySQL Python library for Python 3.x
