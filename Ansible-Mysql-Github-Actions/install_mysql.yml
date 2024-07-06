@@ -7,14 +7,14 @@
       debconf:
         name: "mysql-server"
         question: "mysql-server/root_password"
-        value: "your_root_password"
+        value: "temp_password"
         vtype: "password"
 
     - name: Preconfigure MySQL root password again (for confirmation)
       debconf:
         name: "mysql-server"
         question: "mysql-server/root_password_again"
-        value: "your_root_password"
+        value: "temp_password"
         vtype: "password"
 
     - name: Update apt-get and install necessary packages
@@ -32,10 +32,19 @@
         state: started
         enabled: yes
 
-    - name: Set MySQL root password and ensure it is secure
+    - name: Set MySQL root password with temporary script
+      shell: |
+        mysql -u root -ptemp_password -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'your_root_password'; FLUSH PRIVILEGES;"
+      args:
+        executable: /bin/bash
+
+    - name: Ensure MySQL root password is secure
       mysql_user:
         name: root
         password: "your_root_password"
         host: "localhost"
         priv: '*.*:ALL,GRANT'
         state: present
+      vars:
+        ansible_mysql_login_user: root
+        ansible_mysql_login_password: "your_root_password"
