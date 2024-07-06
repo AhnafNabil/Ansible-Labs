@@ -1,5 +1,5 @@
 ---
-- name: Install MySQL on EC2 instance
+- name: Install and configure MySQL on EC2 instance
   hosts: mysql_servers
   become: yes
   tasks:
@@ -7,26 +7,21 @@
       apt:
         name: "{{ item }}"
         state: present
+        update_cache: yes
       loop:
         - mysql-server  # MySQL Server
         - python3-mysqldb  # MySQL Python library for Python 3.x
-        - mysql-client   # MySQL Client (optional but useful for management tasks)
-        - libmysqlclient-dev  # MySQL development files (optional for certain applications)
-        - python3-pip  # Python package installer (optional but useful for installing Python packages)
 
-    - name: Start MySQL service
+    - name: Start and enable MySQL service
       service:
         name: mysql
         state: started
         enabled: yes
 
-    - name: Set MySQL root password and secure installation
+    - name: Set MySQL root password
       mysql_user:
         name: root
         password: "your_root_password"
-        host_all: yes
-        login_unix_socket: /var/run/mysqld/mysqld.sock
+        host: "localhost"
         priv: '*.*:ALL,GRANT'
         state: present
-
-    
