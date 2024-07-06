@@ -1,5 +1,5 @@
 ---
-- name: Simple MySQL Installation
+- name: Simple MySQL Installation on EC2 instance
   hosts: mysql_servers
   become: yes
   tasks:
