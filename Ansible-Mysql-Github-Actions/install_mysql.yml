@@ -19,3 +19,14 @@
         name: mysql
         state: started
         enabled: yes
+
+    - name: Set MySQL root password and secure installation
+      mysql_user:
+        name: root
+        password: "your_root_password"
+        host_all: yes
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        priv: '*.*:ALL,GRANT'
+        state: present
+
+    
