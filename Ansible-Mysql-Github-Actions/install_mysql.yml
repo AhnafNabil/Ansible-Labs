@@ -1,0 +1,65 @@
+---
+- name: Install MySQL on EC2 instance
+  hosts: mysql_servers
+  become: yes
+  tasks:
+    - name: Update apt-get and install necessary packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - mysql-server  # MySQL Server
+        - python3-mysqldb  # MySQL Python library for Python 3.x
+        - mysql-client   # MySQL Client (optional but useful for management tasks)
+        - libmysqlclient-dev  # MySQL development files (optional for certain applications)
+        - python3-pip  # Python package installer (optional but useful for installing Python packages)
+
+    - name: Start MySQL service
+      service:
+        name: mysql
+        state: started
+        enabled: yes
+
+    - name: Set MySQL root password and secure installation
+      mysql_user:
+        name: root
+        password: "your_root_password"
+        host_all: yes
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+        priv: '*.*:ALL,GRANT'
+        state: present
+
+    - name: Remove test database and access to it
+      mysql_db:
+        name: test
+        state: absent
+        login_user: root
+        login_password: "your_root_password"
+
+    - name: Remove anonymous MySQL users
+      mysql_user:
+        name: ''
+        host_all: yes
+        state: absent
+        login_user: root
+        login_password: "your_root_password"
+
+    - name: Disallow root login remotely
+      mysql_user:
+        name: root
+        host: "{{ item }}"
+        state: absent
+        login_user: root
+        login_password: "your_root_password"
+      with_items:
+        - "{{ ansible_default_ipv4.address }}"
+        - "::1"
+        - "127.0.0.1"
+
+    - name: Verify MySQL installation
+      shell: mysql --version
+      register: mysql_version
+
+    - name: Print MySQL version
+      debug:
+        var: mysql_version.stdout
