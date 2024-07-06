@@ -1,20 +1,21 @@
 ---
-- name: Simple MySQL Installation
+- name: MySQL Installation and Password Management
   hosts: mysql_servers
   become: yes
+  vars:
+    mysql_root_password: "your_actual_root_password_here"
+    mysql_temp_user: "temp_admin"
+    mysql_temp_password: "temp_password_here"
   tasks:
     - name: Update apt-get
       apt:
         update_cache: yes
 
-    - name: Install MySQL server
+    - name: Install MySQL server and Python MySQL libraries
       apt:
-        name: mysql-server
-        state: present
-
-    - name: Install Python MySQL libraries
-      apt:
-        name: python3-pymysql
+        name:
+          - mysql-server
+          - python3-pymysql
         state: present
 
     - name: Start MySQL service
@@ -23,33 +24,67 @@
         state: started
         enabled: yes
 
-    - name: Set MySQL root password if it is not already set
+    - name: Check if MySQL root password is set
+      shell: |
+        mysql -uroot -e "SELECT 1;"
+      register: mysql_root_password_check
       ignore_errors: yes
-      block:
-        - name: Check if MySQL root password is set
-          shell: |
-            mysql -u root -e "SELECT 1;"
-          register: mysql_root_password_check
-          changed_when: false
-          failed_when: false
 
-        - name: Set MySQL root password
-          mysql_user:
-            name: root
-            password: "your_root_password"
-            host: "localhost"
-            priv: "*.*:ALL,GRANT"
-            state: present
-            login_unix_socket: /var/run/mysqld/mysqld.sock
-          when: mysql_root_password_check.rc != 0
+    - name: Create temporary MySQL admin user
+      mysql_user:
+        name: "{{ mysql_temp_user }}"
+        password: "{{ mysql_temp_password }}"
+        priv: "*.*:ALL,GRANT"
+        host: localhost
+        state: present
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+      when: mysql_root_password_check.rc != 0
+      ignore_errors: yes
+      register: temp_user_created
+
+    - name: Set MySQL root password
+      mysql_user:
+        name: root
+        password: "{{ mysql_root_password }}"
+        host: localhost
+        priv: "*.*:ALL,GRANT"
+        state: present
+        login_user: "{{ mysql_temp_user }}"
+        login_password: "{{ mysql_temp_password }}"
+      when: mysql_root_password_check.rc != 0 and temp_user_created.changed
+      ignore_errors: yes
+      register: set_mysql_root_password
 
     - name: Update MySQL root password if already set
       mysql_user:
         name: root
-        password: "your_new_root_password"
-        host: "localhost"
+        password: "{{ mysql_root_password }}"
+        host: localhost
         priv: "*.*:ALL,GRANT"
         state: present
-        login_unix_socket: /var/run/mysqld/mysqld.sock
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
       when: mysql_root_password_check.rc == 0
+
+    - name: Delete temporary MySQL admin user
+      mysql_user:
+        name: "{{ mysql_temp_user }}"
+        host: localhost
+        state: absent
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+      when: temp_user_created.changed
+
+    - name: Check MySQL root password
+      shell: mysql --user=root --password="{{ mysql_root_password }}" --execute="SELECT 1;"
+      register: mysql_root_password_check_final
       ignore_errors: yes
+
+    - name: Debug output
+      debug:
+        var: mysql_root_password_check_final
+
+    - name: Fail if MySQL root password is incorrect
+      fail:
+        msg: "MySQL root password is incorrect or could not be set."
+      when: mysql_root_password_check_final.rc != 0
