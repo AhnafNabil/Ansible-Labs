@@ -1,22 +1,19 @@
 ---
-- name: MySQL Installation on EC2 instance
+- name: MySQL Installation and Password Management
   hosts: mysql_servers
   become: yes
   vars:
-    mysql_root_password: "your_root_password"
+    mysql_root_password: "your_actual_root_password_here"
   tasks:
     - name: Update apt-get
       apt:
         update_cache: yes
 
-    - name: Install MySQL server
+    - name: Install MySQL server and Python MySQL libraries
       apt:
-        name: mysql-server
-        state: present
-
-    - name: Install Python MySQL libraries
-      apt:
-        name: python3-pymysql
+        name:
+          - mysql-server
+          - python3-pymysql
         state: present
 
     - name: Start MySQL service
@@ -25,29 +22,38 @@
         state: started
         enabled: yes
 
-    - name: Check if MySQL root password is set
-      shell: |
-        mysql -uroot -e "SELECT 1;"
-      register: mysql_root_password_check
-      ignore_errors: yes
-
     - name: Set MySQL root password
       mysql_user:
         name: root
         password: "{{ mysql_root_password }}"
-        host: "localhost"
+        host: localhost
         priv: "*.*:ALL,GRANT"
         state: present
         login_unix_socket: /var/run/mysqld/mysqld.sock
-      when: mysql_root_password_check.failed
+      ignore_errors: yes
+      register: mysql_root_password_set
 
-    - name: Update MySQL root password
+    - name: Update MySQL root password if already set
       mysql_user:
         name: root
         password: "{{ mysql_root_password }}"
-        host: "localhost"
+        host: localhost
         priv: "*.*:ALL,GRANT"
         state: present
         login_user: root
         login_password: "{{ mysql_root_password }}"
-      when: not mysql_root_password_check.failed
+      when: mysql_root_password_set|failed
+
+    - name: Check MySQL root password
+      shell: mysql --user=root --password="{{ mysql_root_password }}" --execute="SELECT 1;"
+      register: mysql_root_password_check
+      ignore_errors: yes
+
+    - name: Debug output
+      debug:
+        var: mysql_root_password_check
+
+    - name: Fail if MySQL root password is incorrect
+      fail:
+        msg: "MySQL root password is incorrect or could not be set."
+      when: mysql_root_password_check.rc != 0 and not mysql_root_password_set.changed
