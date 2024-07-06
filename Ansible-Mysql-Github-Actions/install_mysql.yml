@@ -12,7 +12,6 @@
         - python3-mysqldb  # MySQL Python library for Python 3.x
         - mysql-client   # MySQL Client (optional but useful for management tasks)
         - libmysqlclient-dev  # MySQL development files (optional for certain applications)
-        - python3-pip  # Python package installer (optional but useful for installing Python packages)
 
     - name: Start MySQL service
       service:
