@@ -161,12 +161,12 @@ Ensure you have an EC2 instance running and accessible via SSH. Make sure the se
 
         - name: Replace placeholders in inventory file
         run: |
-            sed -i "s/{{ EC2_PUBLIC_IP }}/${{ secrets.EC2_PUBLIC_IP }}/g" hosts.ini
-            sed -i "s|{{ SSH_PRIVATE_KEY_PATH }}|~/.ssh/id_rsa|g" hosts.ini
+            sed -i "s/{{ EC2_PUBLIC_IP }}/${{ secrets.EC2_PUBLIC_IP }}/g" Ansible-Mysql-Github-Actions/hosts.ini
+            sed -i "s|{{ SSH_PRIVATE_KEY_PATH }}|~/.ssh/id_rsa|g" Ansible-Mysql-Github-Actions/hosts.ini
 
         - name: Run Ansible Playbook
         run: |
-            ansible-playbook -i hosts.ini install_mysql.yml
+            ansible-playbook -i Ansible-Mysql-Github-Actions/hosts.ini Ansible-Mysql-Github-Actions/install_mysql.yml
     ```
 
 ### Step 4: Store the SSH Key as a GitHub Secret
