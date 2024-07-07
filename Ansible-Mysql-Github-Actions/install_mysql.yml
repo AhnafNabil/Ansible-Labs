@@ -7,7 +7,7 @@
       apt:
         update_cache: yes
 
-    - name: Install MySQL server and Python MySQL library
+    - name: Install MySQL server and Python MySQL library 
       apt:
         name: "{{ item }}"
         state: present
