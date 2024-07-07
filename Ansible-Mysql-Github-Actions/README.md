@@ -2,7 +2,7 @@
 
 This guide provides a detailed step-by-step approach to automating the installation and configuration of MySQL on an Amazon EC2 instance using Ansible and GitHub Actions.  The process involves writing an Ansible playbook to handle the installation and configuration tasks and creating a GitHub Actions workflow to execute the playbook whenever changes are pushed to the main branch or manually triggered.
 
-![alt text](./images/ansible-diagram.png)
+![alt text](https://raw.githubusercontent.com/AhnafNabil/Ansible-Labs/main/Ansible-Mysql-Github-Actions/images/ansible-diagram.png)
 
 ## Prerequisites
 
@@ -201,7 +201,7 @@ Ensure you have an EC2 instance running and accessible via SSH. Make sure the se
      **Value:** The public IP address of your EC2 instance.
 
 
-     ![alt text](./images/mysql-actions-01.png)
+     ![alt text](https://raw.githubusercontent.com/AhnafNabil/Ansible-Labs/main/Ansible-Mysql-Github-Actions/images/mysql-actions-01.png)
 
 ### Step 5: Push the code to Github
 
@@ -254,7 +254,7 @@ Ensure the Ansible playbook (`install_mysql.yml`) and the GitHub Actions workflo
    - Go to the "Actions" tab in your GitHub repository.
    - Monitor the workflow run to ensure it completes successfully without errors.
 
-   ![alt text](./images/mysql-actions-02.png)
+   ![alt text](https://raw.githubusercontent.com/AhnafNabil/Ansible-Labs/main/Ansible-Mysql-Github-Actions/images/mysql-actions-02.png)
 
 2. **Connect to the EC2 instance:**
 
@@ -270,7 +270,7 @@ Ensure the Ansible playbook (`install_mysql.yml`) and the GitHub Actions workflo
 
     The output should indicate that MySQL is active and running.
 
-    ![alt text](./images/mysql-actions-03.png)
+    ![alt text](https://raw.githubusercontent.com/AhnafNabil/Ansible-Labs/main/Ansible-Mysql-Github-Actions/images/mysql-actions-03.png)
 
 3. **Log in to the MySQL shell:**
 
@@ -288,7 +288,7 @@ Ensure the Ansible playbook (`install_mysql.yml`) and the GitHub Actions workflo
 
     This will display the version of MySQL that is installed.
 
-    ![alt text](./images/mysql-actions-04.png)
+    ![alt text](https://raw.githubusercontent.com/AhnafNabil/Ansible-Labs/main/Ansible-Mysql-Github-Actions/images/mysql-actions-04.png)
 
 ## Verification Steps for Checking Idempotency with Table Creation
 
@@ -318,7 +318,7 @@ Ensure the Ansible playbook (`install_mysql.yml`) and the GitHub Actions workflo
      SELECT * FROM test_table;
      ```
 
-     ![alt text](./images/mysql-actions-05.png)
+     ![alt text](https://raw.githubusercontent.com/AhnafNabil/Ansible-Labs/main/Ansible-Mysql-Github-Actions/images/mysql-actions-05.png)
 
 2. **Trigger the Workflow Again:**
    - Manually trigger the workflow from the "Actions" tab by selecting the workflow and clicking "Run workflow".
@@ -328,7 +328,7 @@ Ensure the Ansible playbook (`install_mysql.yml`) and the GitHub Actions workflo
    - Go to the "Actions" tab in your GitHub repository.
    - Monitor the workflow run to ensure it completes successfully without errors.
 
-   ![alt text](./images/mysql-actions-06.png)
+   ![alt text](https://raw.githubusercontent.com/AhnafNabil/Ansible-Labs/main/Ansible-Mysql-Github-Actions/images/mysql-actions-06.png)
 
 4. **Verify Idempotency and Table Integrity:**
    - Connect to your EC2 instance via SSH:
@@ -345,7 +345,7 @@ Ensure the Ansible playbook (`install_mysql.yml`) and the GitHub Actions workflo
 
      Ensure the service is still active and running, with no changes or restarts triggered by the second playbook run.
 
-     ![alt text](./images/mysql-actions-07.png)
+     ![alt text](https://raw.githubusercontent.com/AhnafNabil/Ansible-Labs/main/Ansible-Mysql-Github-Actions/images/mysql-actions-07.png)
 
    - Log in to the MySQL shell again:
 
@@ -360,7 +360,7 @@ Ensure the Ansible playbook (`install_mysql.yml`) and the GitHub Actions workflo
      SELECT * FROM test_table;
      ```
 
-     ![alt text](./images/mysql-actions-08.png)
+     ![alt text](https://raw.githubusercontent.com/AhnafNabil/Ansible-Labs/main/Ansible-Mysql-Github-Actions/images/mysql-actions-08.png)
 
 If the table and its data remain unchanged after both runs of the playbook, it indicates that the playbook is idempotent. The second run should not alter the existing table or data, confirming that the playbook only makes necessary changes and leaves the system state unchanged when rerun.
 
