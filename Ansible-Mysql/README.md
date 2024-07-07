@@ -60,50 +60,62 @@ Create a playbook file named `install_mysql.yml`:
 
 ```yaml
 ---
-- name: Install MySQL on EC2 instance
+- name: Install and configure MySQL on EC2 instance
   hosts: mysql_servers
   become: yes
+  vars:
+    mysql_root_password: 'your_new_password_here'
+
   tasks:
-    - name: Update apt-get and install necessary packages
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install MySQL server and Python MySQL library
       apt:
         name: "{{ item }}"
         state: present
       loop:
         - mysql-server  # MySQL Server
         - python3-mysqldb  # MySQL Python library for Python 3.x
-        - mysql-client   # MySQL Client (optional but useful for management tasks)
-        - libmysqlclient-dev  # MySQL development files (optional for certain applications)
-        - python3-pip  # Python package installer (optional but useful for installing Python packages)
 
-    - name: Start MySQL service
+    - name: Start and enable MySQL service
       service:
         name: mysql
         state: started
         enabled: yes
 
-    - name: Set MySQL root password and secure installation
+    - name: Check if MySQL root password is already set
+      shell: >
+        mysql -u root -p'{{ mysql_root_password }}' -e "SELECT 1" > /dev/null 2>&1
+      ignore_errors: yes
+      register: mysql_root_password_check
+
+    - name: Set MySQL root password if not set
       mysql_user:
-        name: root
-        password: "your_root_password"
-        host_all: yes
-        login_unix_socket: /var/run/mysqld/mysqld.sock
-        priv: '*.*:ALL,GRANT'
-        state: present
-
-    - name: Remove test database and access to it
-      mysql_db:
-        name: test
-        state: absent
         login_user: root
-        login_password: "your_root_password"
+        login_password: ''
+        name: root
+        host_all: yes
+        password: "{{ mysql_root_password }}"
+      when: mysql_root_password_check.failed
 
-    - name: Remove anonymous MySQL users
+    - name: Ensure MySQL root password is set
+      mysql_user:
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        name: root
+        host_all: yes
+        password: "{{ mysql_root_password }}"
+      when: not mysql_root_password_check.failed
+
+    - name: Remove anonymous users
       mysql_user:
         name: ''
         host_all: yes
         state: absent
         login_user: root
-        login_password: "your_root_password"
+        login_password: "{{ mysql_root_password }}"
 
     - name: Disallow root login remotely
       mysql_user:
@@ -111,24 +123,35 @@ Create a playbook file named `install_mysql.yml`:
         host: "{{ item }}"
         state: absent
         login_user: root
-        login_password: "your_root_password"
-      with_items:
-        - "{{ ansible_default_ipv4.address }}"
-        - "::1"
-        - "127.0.0.1"
+        login_password: "{{ mysql_root_password }}"
+      loop:
+        - "{{ ansible_hostname }}"
+        - '127.0.0.1'
+        - '::1'
 
-    - name: Verify MySQL installation
-      shell: mysql --version
-      register: mysql_version
+    - name: Remove test database and access to it
+      mysql_db:
+        name: test
+        state: absent
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
 
-    - name: Print MySQL version
-      debug:
-        var: mysql_version.stdout
+    - name: Reload privilege tables
+      mysql_query:
+        query: "FLUSH PRIVILEGES;"
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
 ```
 
-Replace `"your_root_password"` with a secure password of your choice.
+Replace `"your_new_password_here"` with a secure password of your choice.
 
 ### Step 4: Run the Ansible Playbook
+
+Change the permissions of your private key file:
+
+```bash
+chmod 600 /path/to/your-key.pem
+```
 
 Run the playbook using the following command:
 
@@ -138,7 +161,7 @@ ansible-playbook -i hosts.ini install_mysql.yml
 
 This command will connect to your EC2 instance and perform the steps defined in the playbook to install and configure MySQL.
 
-![alt text](https://raw.githubusercontent.com/AhnafNabil/Ansible-Labs/main/Ansible-Mysql/images/ansible-mysql-01.png)
+![alt text](./images/ansible-01.png)
 
 ### Step 5: Verify the Installation
 
@@ -158,7 +181,7 @@ This command will connect to your EC2 instance and perform the steps defined in 
 
    The output should indicate that MySQL is active and running.
 
-   ![alt text](https://raw.githubusercontent.com/AhnafNabil/Ansible-Labs/main/Ansible-Mysql/images/ansible-mysql-02.png)
+   ![alt text](./images/ansible-02.png)
 
 3. **Log in to the MySQL shell:**
 
@@ -184,31 +207,14 @@ This command will connect to your EC2 instance and perform the steps defined in 
 
    This will display the version of MySQL that is installed.
 
-   ![alt text](https://raw.githubusercontent.com/AhnafNabil/Ansible-Labs/main/Ansible-Mysql/images/ansible-mysql-03.png)
+   ![alt text](./images/ansible-03.png)
 
-
-## Explanation of Playbook
-
-1. **Update apt-get and Install Necessary Packages:**
-   - The `apt` module is used to install `mysql-server`, `python3-mysqldb`, and other necessary packages.
-
-2. **Start MySQL Service:**
-   - The `service` module ensures the MySQL service is started and enabled to start on boot.
-
-3. **Set MySQL Root Password and Secure Installation:**
-   - The `mysql_user` module sets the root password and grants necessary privileges.
-   - This step also removes the default `test` database and any anonymous users to improve security.
-
-4. **Disallow Root Login Remotely:**
-   - The `mysql_user` module restricts root login to local connections only.
-
-5. **Verify MySQL Installation:**
-   - The `shell` module runs `mysql --version` to verify the MySQL installation.
-   - The `debug` module prints the MySQL version to confirm the installation.
 
 ## Additional Tips
 
 - **Security Group:** Ensure the security group associated with your EC2 instance allows inbound SSH traffic from your IP address.
 - **Permissions:** Keep the permissions of your private key secure (`chmod 600 /path/to/your-key.pem`).
 
-By following these steps, you will successfully install and configure MySQL on your EC2 instance using Ansible. Adjust the playbook as needed based on your specific requirements and environment.
+## Conclusion
+
+By following these steps, you will successfully install and configure MySQL on your EC2 instance using Ansible. This process included setting up your EC2 instance, preparing your local machine with Ansible, creating a detailed Ansible playbook, and executing it to ensure MySQL is installed and properly secured.
