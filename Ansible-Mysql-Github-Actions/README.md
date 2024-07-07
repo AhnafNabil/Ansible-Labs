@@ -200,6 +200,9 @@ Ensure you have an EC2 instance running and accessible via SSH. Make sure the se
    
      **Value:** The public IP address of your EC2 instance.
 
+
+     ![alt text](./images/mysql-actions-01.png)
+
 ### Step 5: Push the code to Github
 
 1. **Initialize a Git Repository:**
@@ -251,6 +254,8 @@ Ensure the Ansible playbook (`install_mysql.yml`) and the GitHub Actions workflo
    - Go to the "Actions" tab in your GitHub repository.
    - Monitor the workflow run to ensure it completes successfully without errors.
 
+   ![alt text](./images/mysql-actions-02.png)
+
 2. **Connect to the EC2 instance:**
 
     ```bash
@@ -264,6 +269,8 @@ Ensure the Ansible playbook (`install_mysql.yml`) and the GitHub Actions workflo
     ```
 
     The output should indicate that MySQL is active and running.
+
+    ![alt text](./images/mysql-actions-03.png)
 
 3. **Log in to the MySQL shell:**
 
@@ -280,6 +287,8 @@ Ensure the Ansible playbook (`install_mysql.yml`) and the GitHub Actions workflo
     ```
 
     This will display the version of MySQL that is installed.
+
+    ![alt text](./images/mysql-actions-04.png)
 
 ## Verification Steps for Checking Idempotency with Table Creation
 
@@ -308,6 +317,8 @@ Ensure the Ansible playbook (`install_mysql.yml`) and the GitHub Actions workflo
      ```sql
      SELECT * FROM test_table;
      ```
+
+     ![alt text](./images/mysql-actions-05.png)
 
 2. **Trigger the Workflow Again:**
    - Manually trigger the workflow from the "Actions" tab by selecting the workflow and clicking "Run workflow".
