@@ -2,15 +2,15 @@
 - name: Install and configure MySQL on EC2 instance
   hosts: mysql_servers
   become: yes
-  module_defaults:
-    mysql:
-      login_unix_socket: /var/run/mysqld/mysqld.sock
   tasks:
-    - name: Update apt-get and install necessary packages
+    - name: Update apt-get cache
+      apt:
+        update_cache: yes
+
+    - name: Install MySQL server and Python MySQL library
       apt:
         name: "{{ item }}"
         state: present
-        update_cache: yes
       loop:
         - mysql-server  # MySQL Server
         - python3-mysqldb  # MySQL Python library for Python 3.x
@@ -20,4 +20,3 @@
         name: mysql
         state: started
         enabled: yes
-
