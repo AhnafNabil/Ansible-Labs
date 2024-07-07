@@ -328,6 +328,8 @@ Ensure the Ansible playbook (`install_mysql.yml`) and the GitHub Actions workflo
    - Go to the "Actions" tab in your GitHub repository.
    - Monitor the workflow run to ensure it completes successfully without errors.
 
+   ![alt text](./images/mysql-actions-06.png)
+
 4. **Verify Idempotency and Table Integrity:**
    - Connect to your EC2 instance via SSH:
 
@@ -341,7 +343,9 @@ Ensure the Ansible playbook (`install_mysql.yml`) and the GitHub Actions workflo
      sudo systemctl status mysql
      ```
 
-        Ensure the service is still active and running, with no changes or restarts triggered by the second playbook run.
+     Ensure the service is still active and running, with no changes or restarts triggered by the second playbook run.
+
+     ![alt text](./images/mysql-actions-07.png)
 
    - Log in to the MySQL shell again:
 
@@ -355,6 +359,8 @@ Ensure the Ansible playbook (`install_mysql.yml`) and the GitHub Actions workflo
      USE test_db;
      SELECT * FROM test_table;
      ```
+
+     ![alt text](./images/mysql-actions-08.png)
 
 If the table and its data remain unchanged after both runs of the playbook, it indicates that the playbook is idempotent. The second run should not alter the existing table or data, confirming that the playbook only makes necessary changes and leaves the system state unchanged when rerun.
 
