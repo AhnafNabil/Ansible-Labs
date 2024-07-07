@@ -3,7 +3,7 @@
   hosts: mysql_servers
   become: yes
   vars:
-    mysql_root_password: 'your_root_password_here'
+    mysql_root_password: 'your_new_password_here'
 
   tasks:
     - name: Update apt-get cache
@@ -26,11 +26,11 @@
 
     - name: Check if MySQL root password is already set
       shell: >
-        mysql -u root -e "SELECT 1" > /dev/null 2>&1
+        mysql -u root -p'{{ mysql_root_password }}' -e "SELECT 1" > /dev/null 2>&1
       ignore_errors: yes
       register: mysql_root_password_check
 
-    - name: Set MySQL root password
+    - name: Set MySQL root password if not set
       mysql_user:
         login_user: root
         login_password: ''
@@ -39,6 +39,15 @@
         password: "{{ mysql_root_password }}"
       when: mysql_root_password_check.failed
 
+    - name: Ensure MySQL root password is set
+      mysql_user:
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        name: root
+        host_all: yes
+        password: "{{ mysql_root_password }}"
+      when: not mysql_root_password_check.failed
+
     - name: Remove anonymous users
       mysql_user:
         name: ''
@@ -46,7 +55,6 @@
         state: absent
         login_user: root
         login_password: "{{ mysql_root_password }}"
-      when: mysql_root_password_check.failed
 
     - name: Disallow root login remotely
       mysql_user:
@@ -59,7 +67,6 @@
         - "{{ ansible_hostname }}"
         - '127.0.0.1'
         - '::1'
-      when: mysql_root_password_check.failed
 
     - name: Remove test database and access to it
       mysql_db:
@@ -67,7 +74,6 @@
         state: absent
         login_user: root
         login_password: "{{ mysql_root_password }}"
-      when: mysql_root_password_check.failed
 
     - name: Reload privilege tables
       mysql_db:
@@ -75,4 +81,3 @@
         state: present
         login_user: root
         login_password: "{{ mysql_root_password }}"
-      when: mysql_root_password_check.failed
