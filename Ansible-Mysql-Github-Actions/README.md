@@ -1,6 +1,8 @@
 # Automating MySQL Installation on an EC2 Instance Using Ansible and GitHub Actions
 
-This guide provides a detailed step-by-step approach to automating the installation and configuration of MySQL on an Amazon EC2 instance using Ansible and GitHub Actions. The automation process includes setting up an EC2 instance, writing an Ansible playbook, and creating a GitHub Actions workflow to execute the playbook.
+This guide provides a detailed step-by-step approach to automating the installation and configuration of MySQL on an Amazon EC2 instance using Ansible and GitHub Actions.  The process involves writing an Ansible playbook to handle the installation and configuration tasks and creating a GitHub Actions workflow to execute the playbook whenever changes are pushed to the main branch or manually triggered.
+
+![alt text](./images/ansible-diagram.png)
 
 ## Prerequisites
 
@@ -8,14 +10,9 @@ This guide provides a detailed step-by-step approach to automating the installat
    - An Ubuntu-based EC2 instance running on AWS.
    - Security group allowing inbound SSH traffic from your IP address.
 
-2. **Local Machine:**
-   - Ansible installed on your local machine.
-   - SSH access to the EC2 instance using a key pair.
-   - Python and necessary libraries installed.
-
-3. **GitHub Repository:**
+2. **GitHub Repository:**
    - A GitHub repository to store your Ansible playbook and workflow files.
-   - GitHub Secrets configured to store your SSH private key.
+   - GitHub Secrets configured to store your SSH public key and public IP address.
 
 ## Steps
 
@@ -39,56 +36,68 @@ Ensure you have an EC2 instance running and accessible via SSH. Make sure the se
     ec2-instance ansible_host={{ EC2_PUBLIC_IP }} ansible_user=ubuntu ansible_ssh_private_key_file={{ SSH_PRIVATE_KEY_PATH }}
     ```
 
-    Replace `<EC2_PUBLIC_IP>` with the public IP address of your EC2 instance and `/path/to/your-key.pem` with the path to your SSH private key file.
+    Store `{{ EC2_PUBLIC_IP }}` with the public IP address of your EC2 instance and `{{ SSH_PRIVATE_KEY_PATH }}` with your SSH private key file in the github repository secrets.
 
 3. **Create a playbook file named `install_mysql.yml`:**
 
     ```yaml
     ---
-    - name: Install MySQL on EC2 instance
+    - name: Install and configure MySQL on EC2 instance
       hosts: mysql_servers
       become: yes
+      vars:
+        mysql_root_password: 'your_new_password_here'
+
       tasks:
-        - name: Update apt-get and install necessary packages
+        - name: Update apt cache
+          apt:
+            update_cache: yes
+
+        - name: Install MySQL server and Python MySQL library
           apt:
             name: "{{ item }}"
             state: present
           loop:
             - mysql-server  # MySQL Server
             - python3-mysqldb  # MySQL Python library for Python 3.x
-            - mysql-client   # MySQL Client (optional but useful for management tasks)
-            - libmysqlclient-dev  # MySQL development files (optional for certain applications)
-            - python3-pip  # Python package installer (optional but useful for installing Python packages)
 
-        - name: Start MySQL service
+        - name: Start and enable MySQL service
           service:
             name: mysql
             state: started
             enabled: yes
 
-        - name: Set MySQL root password and secure installation
+        - name: Check if MySQL root password is already set
+          shell: >
+            mysql -u root -p'{{ mysql_root_password }}' -e "SELECT 1" > /dev/null 2>&1
+          ignore_errors: yes
+          register: mysql_root_password_check
+
+        - name: Set MySQL root password if not set
           mysql_user:
-            name: root
-            password: "your_root_password"
-            host_all: yes
-            login_unix_socket: /var/run/mysqld/mysqld.sock
-            priv: '*.*:ALL,GRANT'
-            state: present
-
-        - name: Remove test database and access to it
-          mysql_db:
-            name: test
-            state: absent
             login_user: root
-            login_password: "your_root_password"
+            login_password: ''
+            name: root
+            host_all: yes
+            password: "{{ mysql_root_password }}"
+          when: mysql_root_password_check.failed
 
-        - name: Remove anonymous MySQL users
+        - name: Ensure MySQL root password is set
+          mysql_user:
+            login_user: root
+            login_password: "{{ mysql_root_password }}"
+            name: root
+            host_all: yes
+            password: "{{ mysql_root_password }}"
+          when: not mysql_root_password_check.failed
+
+        - name: Remove anonymous users
           mysql_user:
             name: ''
             host_all: yes
             state: absent
             login_user: root
-            login_password: "your_root_password"
+            login_password: "{{ mysql_root_password }}"
 
         - name: Disallow root login remotely
           mysql_user:
@@ -96,22 +105,27 @@ Ensure you have an EC2 instance running and accessible via SSH. Make sure the se
             host: "{{ item }}"
             state: absent
             login_user: root
-            login_password: "your_root_password"
-          with_items:
-            - "{{ ansible_default_ipv4.address }}"
-            - "::1"
-            - "127.0.0.1"
+            login_password: "{{ mysql_root_password }}"
+          loop:
+            - "{{ ansible_hostname }}"
+            - '127.0.0.1'
+            - '::1'
 
-        - name: Verify MySQL installation
-          shell: mysql --version
-          register: mysql_version
+        - name: Remove test database and access to it
+          mysql_db:
+            name: test
+            state: absent
+            login_user: root
+            login_password: "{{ mysql_root_password }}"
 
-        - name: Print MySQL version
-          debug:
-            var: mysql_version.stdout
+        - name: Reload privilege tables
+          mysql_query:
+            query: "FLUSH PRIVILEGES;"
+            login_user: root
+            login_password: "{{ mysql_root_password }}"
     ```
 
-    Replace `"your_root_password"` with a secure password of your choice.
+    Replace `"your_new_password_here"` with a secure password of your choice.
 
 ### Step 3: Create a GitHub Actions Workflow File
 
@@ -127,48 +141,50 @@ Ensure you have an EC2 instance running and accessible via SSH. Make sure the se
     name: Deploy MySQL using Ansible
 
     on:
-    push:
+      push:
         branches:
-        - main
-    workflow_dispatch:
+          - main
+      workflow_dispatch:
 
     jobs:
-    deploy:
+      deploy:
         runs-on: ubuntu-latest
 
         steps:
         - name: Checkout repository
-        uses: actions/checkout@v2
+          uses: actions/checkout@v2
 
         - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
+          uses: actions/setup-python@v2
+          with:
             python-version: '3.x'
 
         - name: Install Ansible
-        run: |
+          run: |
             sudo apt update
             sudo apt install ansible -y
 
         - name: Set up SSH Key and known_hosts
-        env:
+          env:
             SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
             EC2_PUBLIC_IP: ${{ secrets.EC2_PUBLIC_IP }}
-        run: |
+          run: |
             mkdir -p ~/.ssh
             echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
             chmod 600 ~/.ssh/id_rsa
             ssh-keyscan -H $EC2_PUBLIC_IP >> ~/.ssh/known_hosts
 
         - name: Replace placeholders in inventory file
-        run: |
-            sed -i "s/{{ EC2_PUBLIC_IP }}/${{ secrets.EC2_PUBLIC_IP }}/g" Ansible-Mysql-Github-Actions/hosts.ini
-            sed -i "s|{{ SSH_PRIVATE_KEY_PATH }}|~/.ssh/id_rsa|g" Ansible-Mysql-Github-Actions/hosts.ini
+          run: |
+            sed -i "s/{{ EC2_PUBLIC_IP }}/${{ secrets.EC2_PUBLIC_IP }}/g" <Path-to-your-host-files>/hosts.ini
+            sed -i "s|{{ SSH_PRIVATE_KEY_PATH }}|~/.ssh/id_rsa|g" <Path-to-your-host-files>/hosts.ini
 
         - name: Run Ansible Playbook
-        run: |
-            ansible-playbook -i Ansible-Mysql-Github-Actions/hosts.ini Ansible-Mysql-Github-Actions/install_mysql.yml
+          run: |
+            ansible-playbook -i <Path-to-your-host-files>/hosts.ini <Path-to-your-playbook>/install_mysql.yml
     ```
+
+    Replace the `<Path-to-your-host-files>` and `<Path-to-your-playbook>` with the direcrtory path of your files.
 
 ### Step 4: Store the SSH Key as a GitHub Secret
 
@@ -184,20 +200,64 @@ Ensure you have an EC2 instance running and accessible via SSH. Make sure the se
    
      **Value:** The public IP address of your EC2 instance.
 
-### Step 5: Run the Workflow
+### Step 5: Push the code to Github
+
+1. **Initialize a Git Repository:**
+   - If you haven't already, initialize a Git repository in your project directory:
+
+     ```bash
+     git init
+     ```
+
+2. **Add Your Remote Repository:**
+   - Add your GitHub repository as a remote:
+
+     ```bash
+     git remote add origin https://github.com/your-username/your-repo-name.git
+     ```
+
+3. **Add Your Files:**
+   - Add all the files using:
+
+     ```bash
+     git add .
+     ```
+
+4. **Commit the Staged Files:**
+   - Create a commit with a descriptive message:
+
+     ```bash
+     git commit -m "Add Ansible playbook"
+     ```
+
+5. **Push Your Changes:**
+   - Push the commit to the main branch of your GitHub repository:
+
+     ```bash
+     git push -u origin main
+     ```
+
+
+### Step 6: Run the Workflow
 
 - **Push to Main Branch:** Whenever you push changes to the main branch, the workflow will execute and run the Ansible playbook.
 - **Manual Trigger:** You can also manually trigger this workflow from the GitHub Actions tab in your repository.
 
 ## Verification
 
-1. **Connect to the EC2 instance:**
+Ensure the Ansible playbook (`install_mysql.yml`) and the GitHub Actions workflow (`ansible-mysql.yml`) are committed and pushed to the main branch of your repository. This will trigger the GitHub Actions workflow to run the Ansible playbook on your EC2 instance.
+
+1. **Check the Workflow Execution:**
+   - Go to the "Actions" tab in your GitHub repository.
+   - Monitor the workflow run to ensure it completes successfully without errors.
+
+2. **Connect to the EC2 instance:**
 
     ```bash
     ssh -i /path/to/your-key.pem ubuntu@<EC2_PUBLIC_IP>
     ```
 
-2. **Verify MySQL is running:**
+3. **Verify MySQL is running:**
 
     ```bash
     sudo systemctl status mysql
@@ -221,4 +281,72 @@ Ensure you have an EC2 instance running and accessible via SSH. Make sure the se
 
     This will display the version of MySQL that is installed.
 
-By following these steps, you will automate the process of installing and configuring MySQL on your EC2 instance using Ansible and GitHub Actions. Adjust the playbook and workflow file as needed based on your specific requirements and environment.
+## Verification Steps for Checking Idempotency with Table Creation
+
+1. **Create a Table in MySQL:**
+
+     - Create a test database and table:
+
+        ```sql
+        CREATE DATABASE test_db;
+        USE test_db;
+        CREATE TABLE test_table (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL
+        );
+        ``` 
+
+
+   - Insert some data into the table:
+
+     ```sql
+     INSERT INTO test_table (name) VALUES ('test1'), ('test2');
+     ```
+
+   - Verify the data in the table:
+
+     ```sql
+     SELECT * FROM test_table;
+     ```
+
+2. **Trigger the Workflow Again:**
+   - Manually trigger the workflow from the "Actions" tab by selecting the workflow and clicking "Run workflow".
+   - Alternatively, make a small change (e.g., update the README file) and push it to the main branch to trigger the workflow again.
+
+3. **Check the Second Workflow Execution:**
+   - Go to the "Actions" tab in your GitHub repository.
+   - Monitor the workflow run to ensure it completes successfully without errors.
+
+4. **Verify Idempotency and Table Integrity:**
+   - Connect to your EC2 instance via SSH:
+
+     ```bash
+     ssh -i /path/to/your-key.pem ubuntu@<EC2_PUBLIC_IP>
+     ```
+
+   - Check the status of the MySQL service again:
+
+     ```bash
+     sudo systemctl status mysql
+     ```
+
+        Ensure the service is still active and running, with no changes or restarts triggered by the second playbook run.
+
+   - Log in to the MySQL shell again:
+
+     ```bash
+     mysql -u root -p
+     ```
+
+   - Use the test database and verify the table data:
+
+     ```sql
+     USE test_db;
+     SELECT * FROM test_table;
+     ```
+
+If the table and its data remain unchanged after both runs of the playbook, it indicates that the playbook is idempotent. The second run should not alter the existing table or data, confirming that the playbook only makes necessary changes and leaves the system state unchanged when rerun.
+
+## Conclusion
+
+By following the steps outlined in this guide, we have successfully automated the installation and configuration of MySQL on an Amazon EC2 instance using Ansible and GitHub Actions. The process involved creating an Ansible playbook to handle the installation and configuration tasks and setting up a GitHub Actions workflow to execute the playbook whenever changes are pushed to the main branch or manually triggered. The idempotency of the Ansible playbook further enhances the robustness of the solution, making it suitable for repeated and large-scale deployments.
