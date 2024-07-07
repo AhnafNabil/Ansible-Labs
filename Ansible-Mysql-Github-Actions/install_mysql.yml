@@ -24,7 +24,7 @@
         state: started
         enabled: yes
 
-    - name: Check if MySQL root password is already set
+    - name: Check if MySQL root password is already set again
       shell: >
         mysql -u root -p'{{ mysql_root_password }}' -e "SELECT 1" > /dev/null 2>&1
       ignore_errors: yes
